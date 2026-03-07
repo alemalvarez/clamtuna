@@ -38,7 +38,7 @@ Screen {
 }
 
 #left-panel {
-    width: 24;
+    width: 32;
     padding: 1 2;
     border-right: solid #2c313a;
 }
