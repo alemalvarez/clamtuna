@@ -1,0 +1,100 @@
+Screen {
+    background: #1a1d23;
+    color: #c8ccd4;
+}
+
+#string-selector {
+    dock: top;
+    height: 3;
+    layout: horizontal;
+    align: center middle;
+    padding: 0 1;
+    background: #21242b;
+    border-bottom: solid #2c313a;
+}
+
+#string-selector Button {
+    min-width: 6;
+    margin: 0 1;
+    background: #2c313a;
+    color: #8b919d;
+    border: none;
+}
+
+#string-selector Button:hover {
+    background: #3a3f4b;
+    color: #c8ccd4;
+}
+
+#string-selector Button.-active {
+    background: #5c8a7d;
+    color: #1a1d23;
+    text-style: bold;
+}
+
+#main-panel {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#left-panel {
+    width: 24;
+    padding: 1 2;
+    border-right: solid #2c313a;
+}
+
+#right-panel {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#note-display {
+    height: auto;
+    padding: 1 0;
+}
+
+.note-name {
+    text-style: bold;
+    color: #c8ccd4;
+}
+
+.note-freq {
+    color: #8b919d;
+}
+
+.cents-green {
+    color: #5c8a7d;
+}
+
+.cents-yellow {
+    color: #c9a94e;
+}
+
+.cents-red {
+    color: #c45c5c;
+}
+
+#gauge {
+    height: 5;
+    padding: 1 0;
+    border-top: solid #2c313a;
+}
+
+#waveform {
+    height: 1fr;
+    border-bottom: solid #2c313a;
+    padding: 0 1;
+}
+
+#spectrum {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#footer-bar {
+    dock: bottom;
+    height: 1;
+    background: #21242b;
+    color: #8b919d;
+    padding: 0 2;
+}
