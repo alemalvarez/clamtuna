@@ -4,21 +4,21 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer
 
-from clamtune.audio import AudioStream
-from clamtune.constants import (
+from clamtuna.audio import AudioStream
+from clamtuna.constants import (
     BUFFER_SIZE,
     freq_to_cents,
     freq_to_note_name,
     nearest_note_freq,
     nearest_string,
 )
-from clamtune.dsp import compute_spectrum
-from clamtune.pitch import yin
-from clamtune.widgets.gauge import Gauge
-from clamtune.widgets.note_display import NoteDisplay
-from clamtune.widgets.spectrum import Spectrum
-from clamtune.widgets.string_selector import StringSelector
-from clamtune.widgets.waveform import Waveform
+from clamtuna.dsp import compute_spectrum
+from clamtuna.pitch import yin
+from clamtuna.widgets.gauge import Gauge
+from clamtuna.widgets.note_display import NoteDisplay
+from clamtuna.widgets.spectrum import Spectrum
+from clamtuna.widgets.string_selector import StringSelector
+from clamtuna.widgets.waveform import Waveform
 
 import numpy as np
 
@@ -27,7 +27,7 @@ class TunerApp(App):
     """CLI Guitar Tuner."""
 
     CSS_PATH = "theme.tcss"
-    TITLE = "clamtune"
+    TITLE = "clamtuna"
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("a", "toggle_auto", "Auto-detect"),

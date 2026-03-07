@@ -13,7 +13,7 @@ CLI-based guitar tuner with a retro terminal aesthetic. Built with Python 3.14 a
 uv sync
 
 # Run the tuner
-uv run clamtune
+uv run clamtuna
 
 # Run tests
 uv run pytest

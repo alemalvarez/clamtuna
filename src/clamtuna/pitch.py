@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from clamtune.constants import SAMPLE_RATE
+from clamtuna.constants import SAMPLE_RATE
 
 
 def yin(signal: np.ndarray, sample_rate: int = SAMPLE_RATE, threshold: float = 0.15) -> float:

@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from clamtune.dsp import compute_spectrum, find_peaks
-from clamtune.constants import SAMPLE_RATE, BUFFER_SIZE
+from clamtuna.dsp import compute_spectrum, find_peaks
+from clamtuna.constants import SAMPLE_RATE, BUFFER_SIZE
 
 
 def make_sine(

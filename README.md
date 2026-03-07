@@ -1,4 +1,4 @@
-# clamtune
+# clamtuna
 
 A CLI guitar tuner with a chill, minimal terminal aesthetic.
 
@@ -21,7 +21,7 @@ Real-time pitch detection, tuning gauge, waveform, and FFT spectrum — all in y
 
 ```bash
 uv sync
-uv run clamtune
+uv run clamtuna
 ```
 
 Requires Python 3.14+ and a microphone.
