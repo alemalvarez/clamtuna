@@ -22,6 +22,9 @@ from clamtuna.widgets.waveform import Waveform
 
 import numpy as np
 
+# How long (in seconds) to hold the last valid note on screen
+NOTE_HOLD_TIME = 1.5
+
 
 class TunerApp(App):
     """CLI Guitar Tuner."""
@@ -38,6 +41,10 @@ class TunerApp(App):
         self.audio = AudioStream()
         self.target_freq: float | None = None
         self.target_name: str | None = None
+        self._last_valid_name: str = "--"
+        self._last_valid_freq: float = 0.0
+        self._last_valid_cents: float = 0.0
+        self._silence_frames: int = 0
 
     def compose(self) -> ComposeResult:
         yield StringSelector()
@@ -78,16 +85,22 @@ class TunerApp(App):
     def _update_pitch(self) -> None:
         samples = self.audio.get_samples(BUFFER_SIZE)
         rms = np.sqrt(np.mean(samples**2))
-        if rms < 0.005:
-            self.query_one(NoteDisplay).update_note("--", 0.0, 0.0)
-            self.query_one(Gauge).update_cents(0.0)
+        max_silence_frames = int(NOTE_HOLD_TIME * 20)  # 20 = update rate in on_mount
+
+        if rms < 0.005 or (freq := yin(samples)) <= 0:
+            self._silence_frames += 1
+            if self._silence_frames >= max_silence_frames:
+                self.query_one(NoteDisplay).update_note("--", 0.0, 0.0)
+                self.query_one(Gauge).update_cents(0.0)
+            else:
+                # Hold last valid reading
+                self.query_one(NoteDisplay).update_note(
+                    self._last_valid_name, self._last_valid_freq, self._last_valid_cents
+                )
+                self.query_one(Gauge).update_cents(self._last_valid_cents)
             return
 
-        freq = yin(samples)
-        if freq <= 0:
-            self.query_one(NoteDisplay).update_note("--", 0.0, 0.0)
-            self.query_one(Gauge).update_cents(0.0)
-            return
+        self._silence_frames = 0
 
         if self.target_freq is not None:
             target = self.target_freq
@@ -100,6 +113,9 @@ class TunerApp(App):
                 name = freq_to_note_name(freq)
 
         cents = freq_to_cents(freq, target)
+        self._last_valid_name = name
+        self._last_valid_freq = freq
+        self._last_valid_cents = cents
         self.query_one(NoteDisplay).update_note(name, freq, cents)
         self.query_one(Gauge).update_cents(cents)
 
