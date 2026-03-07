@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from tuner.constants import SAMPLE_RATE
+from clamtune.constants import SAMPLE_RATE
 
 
 def compute_spectrum(

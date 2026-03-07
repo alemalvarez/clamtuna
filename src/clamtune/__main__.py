@@ -1,6 +1,6 @@
-"""Entry point for the tuner CLI."""
+"""Entry point for the clamtune CLI."""
 
-from tuner.app import TunerApp
+from clamtune.app import TunerApp
 
 
 def main() -> None:

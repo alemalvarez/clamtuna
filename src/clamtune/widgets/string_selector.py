@@ -6,7 +6,7 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Button
 
-from tuner.constants import STANDARD_TUNING
+from clamtune.constants import STANDARD_TUNING
 
 
 class StringSelector(Widget):

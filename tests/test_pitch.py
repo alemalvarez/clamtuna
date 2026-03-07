@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from tuner.pitch import yin
-from tuner.constants import SAMPLE_RATE, BUFFER_SIZE
+from clamtune.pitch import yin
+from clamtune.constants import SAMPLE_RATE, BUFFER_SIZE
 
 
 def make_sine(

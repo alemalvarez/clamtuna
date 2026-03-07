@@ -5,7 +5,7 @@ import threading
 import numpy as np
 import sounddevice as sd
 
-from tuner.constants import BUFFER_SIZE, RING_BUFFER_SIZE, SAMPLE_RATE
+from clamtune.constants import BUFFER_SIZE, RING_BUFFER_SIZE, SAMPLE_RATE
 
 
 class RingBuffer:

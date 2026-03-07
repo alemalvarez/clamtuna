@@ -2,7 +2,7 @@
 
 import pytest
 
-from tuner.constants import (
+from clamtune.constants import (
     freq_to_cents,
     freq_to_midi,
     freq_to_note_name,
