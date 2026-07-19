@@ -17,7 +17,7 @@ uv run clamtuna
 
 # Run tests
 uv run pytest
-uv run pytest tests/test_audio.py::test_pitch_detection -v  # single test
+uv run pytest tests/test_pitch.py::test_yin_standard_tuning -v  # single test
 
 # Lint & format
 uv run ruff check .
@@ -26,9 +26,14 @@ uv run ruff format .
 
 ## Architecture
 
-- **Audio capture**: Use `sounddevice` for real-time microphone input via PortAudio
-- **Pitch detection**: Use `aubio` or a custom YIN/autocorrelation algorithm on NumPy arrays
-- **Terminal UI**: Use `rich` or `textual` for the retro-styled TUI (ASCII art, color gauges, etc.)
+Data flows microphone → DSP → widgets, with audio processing and UI rendering in separate modules:
+
+- `audio.py` — `sounddevice` input stream (PortAudio) feeding a thread-safe ring buffer
+- `pitch.py` — custom YIN pitch detector in pure vectorized NumPy, exposed as composable steps (`cmndf` → `pick_tau` → `yin`)
+- `dsp.py` — FFT magnitude spectrum with log-spaced bins, peak finding, `rms`
+- `constants.py` — audio config, tuning table, note math, and the note-resolution policy (`resolve_target`)
+- `app.py` — Textual `App`; timers poll the ring buffer and push readings into the widgets
+- `widgets/` — one module per widget (note display, cents gauge, waveform, spectrum, string selector); shared block-character rendering and color palette live in `widgets/render.py`
 - **Package manager**: `uv` with `pyproject.toml` — no `requirements.txt` or `setup.py`
 - **Python version**: 3.14 (specified in `pyproject.toml` via `requires-python`)
 
