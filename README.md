@@ -2,18 +2,7 @@
 
 A CLI guitar tuner with a chill, minimal terminal aesthetic.
 
-```
-┌─────────────────────────────────────────┐
-│  [AUTO] [E2] [A2] [D3] [G3] [B3] [E4]  │
-├──────────────┬──────────────────────────┤
-│   Note: A2   │   ▁▂▃▅▆▇█▇▆▅▃▂▁        │
-│  110.02 Hz   │                          │
-│  +3.2 cents  │                          │
-│              ├──────────────────────────┤
-│ FLAT ──●──── │   ▁▃▇▃▁ ▁▂▁ ▁▁         │
-│    SHARP     │   110  220 330  Hz       │
-└──────────────┴──────────────────────────┘
-```
+![clamtuna tuning an A2 string — note display, cents gauge, live waveform and FFT spectrum](docs/screenshot.svg)
 
 Real-time pitch detection, tuning gauge, waveform, and FFT spectrum — all in your terminal.
 
