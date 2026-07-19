@@ -25,6 +25,18 @@ NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 A4_FREQ = 440.0
 A4_MIDI = 69
 
+# Tuning feedback thresholds (cents)
+IN_TUNE_CENTS = 5
+CLOSE_CENTS = 20
+STRING_SNAP_CENTS = 50  # beyond this, tune against the nearest semitone instead
+
+# Signal levels
+SILENCE_RMS = 0.005
+
+# Spectrum analysis range
+SPECTRUM_MIN_FREQ = 50.0
+SPECTRUM_MAX_FREQ = 5000.0
+
 
 def freq_to_midi(freq: float) -> float:
     """Convert frequency to MIDI note number (fractional)."""
@@ -67,5 +79,20 @@ def nearest_string(freq: float) -> tuple[str, float]:
     """Find the nearest standard tuning string to a frequency."""
     if freq <= 0:
         return STANDARD_TUNING[0]
-    best = min(STANDARD_TUNING, key=lambda s: abs(freq_to_cents(freq, s[1])))
-    return best
+    return min(STANDARD_TUNING, key=lambda s: abs(freq_to_cents(freq, s[1])))
+
+
+def resolve_target(freq: float, target: tuple[str, float] | None) -> tuple[str, float, float]:
+    """Resolve a detected frequency to (note name, target freq, cents offset).
+
+    With a manual target, tune against it. Otherwise tune against the nearest
+    string, falling back to the nearest semitone when the note is more than
+    STRING_SNAP_CENTS away from every string.
+    """
+    if target is not None:
+        name, target_freq = target
+    else:
+        name, target_freq = nearest_string(freq)
+        if abs(freq_to_cents(freq, target_freq)) > STRING_SNAP_CENTS:
+            name, target_freq = freq_to_note_name(freq), nearest_note_freq(freq)
+    return name, target_freq, freq_to_cents(freq, target_freq)

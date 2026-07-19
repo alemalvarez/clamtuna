@@ -48,11 +48,13 @@ class AudioStream:
         self.block_size = block_size
         self.ring_buffer = RingBuffer()
         self.stream: sd.InputStream | None = None
-        self.is_running = False
+
+    @property
+    def is_running(self) -> bool:
+        return self.stream is not None
 
     def _callback(self, indata: np.ndarray, frames: int, time_info, status) -> None:
-        if status:
-            pass  # silently ignore xruns
+        # `status` reports xruns — a dropped block is harmless for a tuner display
         self.ring_buffer.write(indata[:, 0])
 
     def start(self) -> None:
@@ -66,14 +68,12 @@ class AudioStream:
             callback=self._callback,
         )
         self.stream.start()
-        self.is_running = True
 
     def stop(self) -> None:
         if self.stream is not None:
             self.stream.stop()
             self.stream.close()
             self.stream = None
-        self.is_running = False
 
     def get_samples(self, n: int = BUFFER_SIZE) -> np.ndarray:
         return self.ring_buffer.read(n)

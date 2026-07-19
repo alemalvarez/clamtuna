@@ -1,7 +1,9 @@
 """Note display widget — detected note name, Hz, cents."""
 
-from textual.widget import Widget
 from textual.reactive import reactive
+from textual.widget import Widget
+
+from clamtuna.widgets.render import cents_status
 
 
 class NoteDisplay(Widget):
@@ -23,17 +25,8 @@ class NoteDisplay(Widget):
         if self.frequency <= 0:
             return "  [bold dim]--[/]\n\n  --- Hz\n  --- cents"
 
-        abs_cents = abs(self.cents)
-        if abs_cents < 5:
-            color = "#5c8a7d"
-            symbol = "  IN TUNE"
-        elif abs_cents < 20:
-            color = "#c9a94e"
-            symbol = "  CLOSE"
-        else:
-            color = "#c45c5c"
-            symbol = ""
-
+        color, status = cents_status(self.cents)
+        symbol = f"  {status}" if status else ""
         sign = "+" if self.cents >= 0 else ""
         return (
             f"  [bold {color}]{self.note_name}[/]\n\n"
@@ -45,12 +38,3 @@ class NoteDisplay(Widget):
         self.note_name = name
         self.frequency = freq
         self.cents = cents
-
-    def watch_note_name(self) -> None:
-        self.refresh()
-
-    def watch_frequency(self) -> None:
-        self.refresh()
-
-    def watch_cents(self) -> None:
-        self.refresh()

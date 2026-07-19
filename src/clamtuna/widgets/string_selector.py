@@ -50,7 +50,6 @@ class StringSelector(Widget):
     def __init__(self) -> None:
         super().__init__()
         self.auto_mode = True
-        self.selected: str | None = None
 
     def compose(self) -> ComposeResult:
         with Horizontal():
@@ -58,21 +57,20 @@ class StringSelector(Widget):
             for name, _ in STANDARD_TUNING:
                 yield Button(name, id=f"btn-{name}")
 
+    def select_auto(self) -> None:
+        """Switch to auto-detect mode, as if the AUTO button was pressed."""
+        self.query_one("#btn-auto", Button).press()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        btn_id = event.button.id
         # Clear all active states
         for button in self.query(Button):
             button.remove_class("-active")
         event.button.add_class("-active")
 
-        if btn_id == "btn-auto":
+        if event.button.id == "btn-auto":
             self.auto_mode = True
-            self.selected = None
             self.post_message(self.StringSelected(None, None))
         else:
+            name = event.button.id.removeprefix("btn-")
             self.auto_mode = False
-            for name, freq in STANDARD_TUNING:
-                if btn_id == f"btn-{name}":
-                    self.selected = name
-                    self.post_message(self.StringSelected(name, freq))
-                    break
+            self.post_message(self.StringSelected(name, dict(STANDARD_TUNING)[name]))

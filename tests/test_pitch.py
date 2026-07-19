@@ -4,23 +4,15 @@ import numpy as np
 import pytest
 
 from clamtuna.pitch import yin
-from clamtuna.constants import SAMPLE_RATE, BUFFER_SIZE
+from clamtuna.constants import SAMPLE_RATE, BUFFER_SIZE, STANDARD_TUNING
+
+from tests.conftest import make_sine
+
+TUNING_CASES = [*STANDARD_TUNING, ("A4", 440.0)]
 
 
-def make_sine(
-    freq: float, duration_samples: int = BUFFER_SIZE, sr: int = SAMPLE_RATE
-) -> np.ndarray:
-    """Generate a pure sine wave at the given frequency."""
-    t = np.arange(duration_samples) / sr
-    return (0.8 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
-
-
-@pytest.mark.parametrize(
-    "freq",
-    [82.41, 110.0, 146.83, 196.0, 246.94, 329.63, 440.0],
-    ids=["E2", "A2", "D3", "G3", "B3", "E4", "A4"],
-)
-def test_yin_standard_tuning(freq):
+@pytest.mark.parametrize(("name", "freq"), TUNING_CASES, ids=[name for name, _ in TUNING_CASES])
+def test_yin_standard_tuning(name, freq):
     signal = make_sine(freq)
     detected = yin(signal)
     assert detected == pytest.approx(freq, rel=0.02), f"Expected ~{freq}, got {detected}"

@@ -3,15 +3,10 @@
 import numpy as np
 import pytest
 
-from clamtuna.dsp import compute_spectrum, find_peaks
+from clamtuna.dsp import compute_spectrum, find_peaks, rms
 from clamtuna.constants import SAMPLE_RATE, BUFFER_SIZE
 
-
-def make_sine(
-    freq: float, duration_samples: int = BUFFER_SIZE, sr: int = SAMPLE_RATE
-) -> np.ndarray:
-    t = np.arange(duration_samples) / sr
-    return (0.8 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+from tests.conftest import make_sine
 
 
 def test_spectrum_shape():
@@ -62,3 +57,13 @@ def test_spectrum_empty():
     freqs, mags = compute_spectrum(np.array([]))
     assert len(freqs) == 0
     assert len(mags) == 0
+
+
+def test_rms_sine():
+    # RMS of a sine with amplitude 0.8 is 0.8 / sqrt(2)
+    assert rms(make_sine(440.0)) == pytest.approx(0.8 / np.sqrt(2), rel=1e-2)
+
+
+def test_rms_silence():
+    assert rms(np.zeros(BUFFER_SIZE, dtype=np.float32)) == 0.0
+    assert rms(np.array([])) == 0.0

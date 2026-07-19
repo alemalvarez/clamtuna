@@ -9,6 +9,7 @@ from clamtuna.constants import (
     midi_to_freq,
     nearest_note_freq,
     nearest_string,
+    resolve_target,
 )
 
 
@@ -61,6 +62,28 @@ def test_nearest_string():
 def test_nearest_string_low():
     name, freq = nearest_string(85.0)  # close to E2=82.41
     assert name == "E2"
+
+
+def test_resolve_target_manual():
+    # A manual target wins even when another string is closer
+    name, target_freq, cents = resolve_target(111.0, ("E2", 82.41))
+    assert name == "E2"
+    assert target_freq == 82.41
+    assert cents > 0  # well sharp of E2
+
+
+def test_resolve_target_auto_snaps_to_string():
+    name, target_freq, cents = resolve_target(111.0, None)
+    assert (name, target_freq) == ("A2", 110.0)
+    assert cents == pytest.approx(15.7, abs=0.5)
+
+
+def test_resolve_target_auto_far_from_strings():
+    # 440 Hz is >50 cents from every string → falls back to nearest semitone
+    name, target_freq, cents = resolve_target(440.0, None)
+    assert name == "A4"
+    assert target_freq == pytest.approx(440.0, rel=1e-3)
+    assert cents == pytest.approx(0.0, abs=1.0)
 
 
 def test_zero_freq_handling():

@@ -3,7 +3,7 @@
 import numpy as np
 from textual.widget import Widget
 
-BLOCKS = " ▁▂▃▄▅▆▇█"
+from clamtuna.widgets.render import GREEN, downsample, render_block_rows
 
 
 class Spectrum(Widget):
@@ -15,6 +15,8 @@ class Spectrum(Widget):
         padding: 0 1;
     }
     """
+
+    LABEL_TARGETS = [100, 200, 500, 1000, 2000, 5000]
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -32,52 +34,24 @@ class Spectrum(Widget):
         if content_width <= 0 or content_height <= 0 or len(self._magnitudes) == 0:
             return ""
 
-        freqs = self._freqs
-        mags = self._magnitudes
+        n_bars = min(content_width, len(self._magnitudes))
+        mags = downsample(self._magnitudes, n_bars)
+        freqs = downsample(self._freqs, n_bars)
 
-        # Resample to fit width
-        n_bars = min(content_width, len(mags))
-        if n_bars < len(mags):
-            indices = np.linspace(0, len(mags) - 1, n_bars, dtype=int)
-            mags = mags[indices]
-            freqs = freqs[indices]
+        rows = [f"[{GREEN}]{row}[/]" for row in render_block_rows(mags, content_height)]
+        rows.append(f"[dim]{self._label_row(freqs, n_bars)}[/]")
+        return "\n".join(rows)
 
-        # Build rows top-down
-        rows = []
-        for row in range(content_height):
-            threshold = 1.0 - (row + 1) / content_height
-            threshold_top = 1.0 - row / content_height
-            line = []
-            for mag in mags:
-                if mag >= threshold_top:
-                    line.append(BLOCKS[8])
-                elif mag <= threshold:
-                    line.append(" ")
-                else:
-                    frac = (mag - threshold) / (threshold_top - threshold)
-                    idx = int(frac * 8)
-                    idx = max(0, min(8, idx))
-                    line.append(BLOCKS[idx])
-            rows.append(f"[#5c8a7d]{''.join(line)}[/]")
-
-        # Frequency label row
+    def _label_row(self, freqs: np.ndarray, n_bars: int) -> str:
+        """Frequency labels placed under the bars closest to each target."""
         label_line = list(" " * n_bars)
-        label_targets = [100, 200, 500, 1000, 2000, 5000]
-        for target in label_targets:
+        for target in self.LABEL_TARGETS:
             if len(freqs) == 0:
                 break
             idx = int(np.argmin(np.abs(freqs - target)))
             if 0 <= idx < n_bars:
-                if target >= 1000:
-                    label = f"{target // 1000}k"
-                else:
-                    label = str(target)
+                label = f"{target // 1000}k" if target >= 1000 else str(target)
                 start = max(0, idx - len(label) // 2)
                 end = min(n_bars, start + len(label))
-                for i, ch in enumerate(label):
-                    pos = start + i
-                    if pos < end:
-                        label_line[pos] = ch
-
-        rows.append(f"[dim]{''.join(label_line)}[/]")
-        return "\n".join(rows)
+                label_line[start:end] = label[: end - start]
+        return "".join(label_line)

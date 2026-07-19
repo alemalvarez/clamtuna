@@ -1,13 +1,10 @@
 """Tuning gauge widget — dot row from -50 to +50 cents."""
 
-from textual.widget import Widget
 from textual.reactive import reactive
+from textual.widget import Widget
 
-# Colors
-GREEN = "#5c8a7d"
-YELLOW = "#c9a94e"
-RED = "#c45c5c"
-DIM = "#3a3f4b"
+from clamtuna.constants import IN_TUNE_CENTS
+from clamtuna.widgets.render import DIM, GREEN, RED, cents_status
 
 
 class Gauge(Widget):
@@ -34,14 +31,7 @@ class Gauge(Widget):
         pos = int(round(center + (clamped / 50.0) * center))
         pos = max(0, min(n - 1, pos))
 
-        # Pick color based on distance from center
-        abs_cents = abs(self.cents)
-        if abs_cents < 5:
-            active_color = GREEN
-        elif abs_cents < 20:
-            active_color = YELLOW
-        else:
-            active_color = RED
+        active_color, _ = cents_status(self.cents)
 
         # Build the dot row, centered in the available width
         dots = []
@@ -56,8 +46,8 @@ class Gauge(Widget):
         dot_row = " ".join(dots)
 
         # Labels
-        flat_label = f"[{RED}]♭[/]" if self.cents < -5 else f"[{DIM}]♭[/]"
-        sharp_label = f"[{RED}]♯[/]" if self.cents > 5 else f"[{DIM}]♯[/]"
+        flat_label = f"[{RED}]♭[/]" if self.cents < -IN_TUNE_CENTS else f"[{DIM}]♭[/]"
+        sharp_label = f"[{RED}]♯[/]" if self.cents > IN_TUNE_CENTS else f"[{DIM}]♯[/]"
 
         # Center everything
         # Dot row is n dots + (n-1) spaces = 2n-1 visible chars
@@ -80,6 +70,3 @@ class Gauge(Widget):
 
     def update_cents(self, cents: float) -> None:
         self.cents = cents
-
-    def watch_cents(self) -> None:
-        self.refresh()

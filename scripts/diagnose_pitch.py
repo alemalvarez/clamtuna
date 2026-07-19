@@ -6,15 +6,19 @@ import time
 import numpy as np
 import sounddevice as sd
 
-# Add src to path so we can import clamtuna
-sys.path.insert(0, "src")
-
-from clamtuna.constants import SAMPLE_RATE, BUFFER_SIZE
-from clamtuna.pitch import yin
-
+from clamtuna.constants import BUFFER_SIZE, SAMPLE_RATE
+from clamtuna.dsp import find_peaks, rms
+from clamtuna.pitch import DEFAULT_THRESHOLD, cmndf, pick_tau, yin
 
 RECORD_SECONDS = 2
 EXPECTED_FREQ = float(sys.argv[1]) if len(sys.argv) > 1 else 110.0
+
+
+def harmonic_of(freq: float, fundamental: float, tol: float = 0.08) -> int | None:
+    """Which harmonic of fundamental this freq is (1 = the fundamental itself), or None."""
+    ratio = freq / fundamental
+    nearest = round(ratio)
+    return nearest if nearest >= 1 and abs(ratio - nearest) < tol else None
 
 
 def record(seconds: float, sr: int = SAMPLE_RATE) -> np.ndarray:
@@ -29,36 +33,21 @@ def record(seconds: float, sr: int = SAMPLE_RATE) -> np.ndarray:
 def analyze_spectrum(signal: np.ndarray, sr: int = SAMPLE_RATE):
     """Show top spectral peaks."""
     windowed = signal * np.hanning(len(signal))
-    fft_result = np.fft.rfft(windowed)
-    magnitudes = np.abs(fft_result)
+    magnitudes = np.abs(np.fft.rfft(windowed))
     freqs = np.fft.rfftfreq(len(signal), 1.0 / sr)
 
-    # Focus on 50-2000 Hz
+    # Focus on 50-2000 Hz, top 10 peaks
     mask = (freqs >= 50) & (freqs <= 2000)
-    freqs = freqs[mask]
-    magnitudes = magnitudes[mask]
+    peaks = find_peaks(freqs[mask], magnitudes[mask], threshold=0.0)[:10]
 
-    # Find top 10 peaks
-    peak_indices = []
-    for i in range(1, len(magnitudes) - 1):
-        if magnitudes[i] > magnitudes[i - 1] and magnitudes[i] > magnitudes[i + 1]:
-            peak_indices.append(i)
-    peak_indices.sort(key=lambda i: magnitudes[i], reverse=True)
-    peak_indices = peak_indices[:10]
-
-    top_mag = magnitudes[peak_indices[0]] if peak_indices else 1.0
+    top_mag = peaks[0][1] if peaks else 1.0
     print("=== FFT Spectrum Peaks (50-2000 Hz) ===")
     print(f"{'Freq (Hz)':>12}  {'Magnitude':>10}  {'Relative':>8}  {'Harmonic?'}")
     print("-" * 55)
-    for idx in peak_indices:
-        f = freqs[idx]
-        m = magnitudes[idx]
+    for f, m in peaks:
         rel = m / top_mag
-        # Check if it's a harmonic of the expected fundamental
-        ratio = f / EXPECTED_FREQ
-        nearest_int = round(ratio)
-        is_harmonic = abs(ratio - nearest_int) < 0.08 and nearest_int >= 1
-        label = f"~{nearest_int}x fundamental" if is_harmonic else ""
+        h = harmonic_of(f, EXPECTED_FREQ)
+        label = f"~{h}x fundamental" if h else ""
         bar = "#" * int(rel * 30)
         print(f"{f:>12.1f}  {m:>10.1f}  {rel:>8.3f}  {bar} {label}")
     print()
@@ -66,95 +55,48 @@ def analyze_spectrum(signal: np.ndarray, sr: int = SAMPLE_RATE):
 
 def analyze_yin_detail(signal: np.ndarray, sr: int = SAMPLE_RATE):
     """Run YIN and also show the CMNDF at key lag points."""
-    n = len(signal)
-    w = n // 2
-    x = np.float64(signal)
-
-    # Compute difference function (same as in pitch.py)
-    fft_size = 1
-    while fft_size < n:
-        fft_size *= 2
-    fft_size *= 2
-
-    x1 = np.zeros(fft_size)
-    x1[:w] = x[:w]
-    x2 = np.zeros(fft_size)
-    x2[:n] = x[:n]
-
-    fft1 = np.fft.rfft(x1)
-    fft2 = np.fft.rfft(x2)
-    xcorr = np.fft.irfft(np.conj(fft1) * fft2)
-
-    e1 = np.sum(x[:w] ** 2)
-    cumsum = np.cumsum(x**2)
-    e2 = np.empty(w)
-    e2[0] = cumsum[w - 1]
-    for tau in range(1, w):
-        end = tau + w - 1
-        if end < n:
-            e2[tau] = cumsum[end] - cumsum[tau - 1]
-        else:
-            e2[tau] = cumsum[n - 1] - cumsum[tau - 1]
-
-    diff = e1 + e2 - 2.0 * xcorr[:w]
-    diff[0] = 0.0
-
-    # CMNDF
-    cmndf = np.ones(w)
-    running_sum = 0.0
-    for tau in range(1, w):
-        running_sum += diff[tau]
-        if running_sum == 0:
-            cmndf[tau] = 1.0
-        else:
-            cmndf[tau] = diff[tau] * tau / running_sum
+    w = len(signal) // 2
+    curve = cmndf(signal)
 
     # Show CMNDF values at expected fundamental and its harmonics
     print(f"=== CMNDF at key lag points (expected fundamental: {EXPECTED_FREQ} Hz) ===")
-    print(f"{'Harmonic':>10}  {'Freq (Hz)':>10}  {'Lag (samples)':>14}  {'CMNDF value':>12}  {'< 0.15?'}")
+    print(
+        f"{'Harmonic':>10}  {'Freq (Hz)':>10}  {'Lag (samples)':>14}  {'CMNDF value':>12}"
+        f"  {'< ' + str(DEFAULT_THRESHOLD) + '?'}"
+    )
     print("-" * 70)
     for h in [1, 2, 3, 4, 5]:
         freq_h = EXPECTED_FREQ * h
         lag = int(round(sr / freq_h))
         if 0 < lag < w:
-            val = cmndf[lag]
+            val = curve[lag]
             # Also find local min near this lag
             search_start = max(2, lag - 5)
             search_end = min(w, lag + 6)
-            local_min_lag = search_start + np.argmin(cmndf[search_start:search_end])
-            local_min_val = cmndf[local_min_lag]
-            below = "YES" if val < 0.15 else "no"
-            note = ""
-            if h == 1:
-                note = "<-- fundamental"
-            else:
-                note = f"<-- {h}x harmonic (lag = period/{h})"
+            local_min_lag = search_start + np.argmin(curve[search_start:search_end])
+            local_min_val = curve[local_min_lag]
+            below = "YES" if val < DEFAULT_THRESHOLD else "no"
+            note = "<-- fundamental" if h == 1 else f"<-- {h}x harmonic (lag = period/{h})"
             print(
                 f"{'1/' + str(h) + 'x':>10}  {freq_h:>10.1f}  {lag:>14}  {val:>12.4f}  {below:>7}  {note}"
             )
             if local_min_lag != lag:
-                print(f"{'':>10}  {'':>10}  {local_min_lag:>14}  {local_min_val:>12.4f}         (nearby min)")
+                print(
+                    f"{'':>10}  {'':>10}  {local_min_lag:>14}  {local_min_val:>12.4f}         (nearby min)"
+                )
     print()
 
     # Show where YIN actually picks its estimate
-    threshold = 0.15
-    tau_estimate = 0
-    for tau in range(2, w):
-        if cmndf[tau] < threshold:
-            while tau + 1 < w and cmndf[tau + 1] < cmndf[tau]:
-                tau += 1
-            tau_estimate = tau
-            break
-
-    if tau_estimate > 0:
-        detected_freq = sr / tau_estimate
-        print(f"YIN picks lag={tau_estimate} -> {detected_freq:.2f} Hz")
+    tau = pick_tau(curve)
+    if tau > 0:
+        detected_freq = sr / tau
+        print(f"YIN picks lag={tau} -> {detected_freq:.2f} Hz")
         ratio = detected_freq / EXPECTED_FREQ
         print(f"Ratio to expected: {ratio:.3f}x", end="")
-        nearest = round(ratio)
-        if abs(ratio - nearest) < 0.08 and nearest > 1:
-            print(f"  ** Locked onto harmonic {nearest}x! **")
-        elif abs(ratio - 1) < 0.08:
+        h = harmonic_of(detected_freq, EXPECTED_FREQ)
+        if h is not None and h > 1:
+            print(f"  ** Locked onto harmonic {h}x! **")
+        elif h == 1:
             print("  (correct)")
         else:
             print()
@@ -175,12 +117,13 @@ def run_yin_on_chunks(audio: np.ndarray, sr: int = SAMPLE_RATE):
         t = i * BUFFER_SIZE / sr
         if freq > 0:
             ratio = freq / EXPECTED_FREQ
-            flag = ""
-            nearest = round(ratio)
-            if abs(ratio - nearest) < 0.08 and nearest > 1:
-                flag = f"  ** {nearest}x harmonic **"
-            elif abs(ratio - 1) < 0.08:
+            h = harmonic_of(freq, EXPECTED_FREQ)
+            if h is not None and h > 1:
+                flag = f"  ** {h}x harmonic **"
+            elif h == 1:
                 flag = "  (correct)"
+            else:
+                flag = ""
             print(f"  t={t:.2f}s  detected={freq:>7.1f} Hz  ratio={ratio:.2f}x{flag}")
         else:
             print(f"  t={t:.2f}s  detected=  --")
@@ -203,19 +146,14 @@ def main():
     np.save(outpath, audio)
     print(f"Saved raw audio to {outpath} ({len(audio)} samples)\n")
 
-    # Use the loudest 4096-sample window for detailed analysis
-    # (find the chunk with highest RMS)
-    best_start = 0
-    best_rms = 0
-    for start in range(0, len(audio) - BUFFER_SIZE, BUFFER_SIZE // 4):
-        chunk = audio[start : start + BUFFER_SIZE]
-        rms = np.sqrt(np.mean(chunk**2))
-        if rms > best_rms:
-            best_rms = rms
-            best_start = start
-
+    # Use the loudest BUFFER_SIZE-sample window for detailed analysis
+    starts = range(0, len(audio) - BUFFER_SIZE, BUFFER_SIZE // 4)
+    best_start = max(starts, key=lambda s: rms(audio[s : s + BUFFER_SIZE]))
     best_chunk = audio[best_start : best_start + BUFFER_SIZE]
-    print(f"Loudest chunk at sample {best_start} (t={best_start/SAMPLE_RATE:.2f}s, RMS={best_rms:.4f})\n")
+    print(
+        f"Loudest chunk at sample {best_start} "
+        f"(t={best_start / SAMPLE_RATE:.2f}s, RMS={rms(best_chunk):.4f})\n"
+    )
 
     analyze_spectrum(best_chunk)
     analyze_yin_detail(best_chunk)
