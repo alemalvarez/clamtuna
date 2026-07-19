@@ -29,14 +29,14 @@ Requires Python 3.14+ and a microphone.
 ## How It Works
 
 - **YIN pitch detection** — pure numpy, no native DSP libs needed
-- **FFT spectrum** — log-spaced frequency bins with harmonic labels
+- **FFT spectrum** — log-spaced frequency bins with frequency axis labels
 - **Textual TUI** — dark charcoal theme, Unicode block art, color-coded cents
 
 ## Controls
 
 | Key | Action |
 |-----|--------|
-| `a` | Toggle auto-detect mode |
+| `a` | Return to auto-detect mode |
 | `q` | Quit |
 
 Click any string button (`E2` `A2` `D3` `G3` `B3` `E4`) to lock to that target, or use `AUTO` to detect the nearest string automatically.
@@ -48,3 +48,7 @@ uv run pytest          # tests
 uv run ruff check .    # lint
 uv run ruff format .   # format
 ```
+
+## License
+
+Apache 2.0
